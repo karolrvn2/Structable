@@ -332,7 +332,7 @@ export default function TreeTable() {
         <thead>
           {headerRows.map((row, rowIndex) => (
             <tr key={rowIndex}>
-              {row.map(({ column, colSpan, rowSpan, depth }) => {
+              {row.map(({ column, colSpan, rowSpan, depth }, cellIndex) => {
                 const headerKey = `header:${column.id}:${depth}`;
                 const isHeaderSelected = selectedSet.has(headerKey);
                 const resizerTargetId = resizerTargetByColumn.get(column.id);
@@ -341,13 +341,14 @@ export default function TreeTable() {
                   ? (hiddenSet.has(column.id) ? [] : [column.id])
                   : getVisibleLeafColumns(column, hiddenSet).map((c) => c.id);
                 const showMenu = leafIdsToHide.length > 0;
+                const isSticky = cellIndex === 0;
 
                 return (
                   <th
                     key={headerKey}
                     colSpan={colSpan}
                     rowSpan={rowSpan}
-                    className={isHeaderSelected ? 'header-selected' : undefined}
+                    className={[isHeaderSelected ? 'header-selected' : '', isSticky ? 'sticky-col' : ''].filter(Boolean).join(' ') || undefined}
                     onClick={(event) => toggleSelection(headerKey, event)}
                   >
                     <div className="column-group">
@@ -403,13 +404,14 @@ export default function TreeTable() {
         <tbody>
           {rows.map((row, rowIndex) => (
             <tr key={rowIndex}>
-              {visibleLeafColumns.map((column) => {
+              {visibleLeafColumns.map((column, colIndex) => {
                 const bodyKey = `cell:${rowIndex}:${column.id}`;
                 const isSelected = selectedSet.has(bodyKey);
+                const isSticky = colIndex === 0;
                 return (
                   <td
                     key={bodyKey}
-                    className={isSelected ? 'cell-selected' : undefined}
+                    className={[isSelected ? 'cell-selected' : '', isSticky ? 'sticky-col' : ''].filter(Boolean).join(' ') || undefined}
                     onClick={(event) => toggleSelection(bodyKey, event)}
                   >
                     {row[column.id as keyof typeof row] ?? '-'}

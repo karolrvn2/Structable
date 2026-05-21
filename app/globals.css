@@ -1,5 +1,5 @@
 :root {
-  color-scheme: light;
+  color-scheme: light dark;
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   background: #f6f8fb;
   color: #111827;
@@ -113,6 +113,23 @@ p {
 
 .tree-table tr:last-child td {
   border-bottom: none;
+}
+
+.sticky-col {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+}
+
+.tree-table th.sticky-col {
+  z-index: 2;
+  background: #f8fafc;
+  box-shadow: 2px 0 6px -2px rgba(15, 23, 42, 0.08);
+}
+
+.tree-table td.sticky-col {
+  background: #ffffff;
+  box-shadow: 2px 0 6px -2px rgba(15, 23, 42, 0.08);
 }
 
 .cell-selected {
@@ -245,4 +262,119 @@ p {
   margin-top: 16px;
   color: #475569;
   font-size: 0.95rem;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    background: #0f172a;
+    color: #f1f5f9;
+  }
+
+  body {
+    background: #0f172a;
+  }
+
+  .eyebrow {
+    color: #60a5fa;
+  }
+
+  p {
+    color: #94a3b8;
+  }
+
+  .table-shell {
+    background: #1e293b;
+    box-shadow: 0 18px 50px rgba(0, 0, 0, 0.4);
+  }
+
+  .tree-table-wrap {
+    border-color: #334155;
+  }
+
+  .tree-table th,
+  .tree-table td {
+    border-bottom-color: #334155;
+  }
+
+  .tree-table th {
+    background: #1e293b;
+    color: #f1f5f9;
+  }
+
+  .tree-table td {
+    background: #0f172a;
+  }
+
+  .tree-table th.sticky-col {
+    background: #1e293b;
+    box-shadow: 2px 0 6px -2px rgba(0, 0, 0, 0.4);
+  }
+
+  .tree-table td.sticky-col {
+    background: #0f172a;
+    box-shadow: 2px 0 6px -2px rgba(0, 0, 0, 0.4);
+  }
+
+  .cell-selected {
+    background: #1e3a5f !important;
+  }
+
+  .header-selected {
+    background: #1e3a8a !important;
+  }
+
+  .resizer::after {
+    background: rgba(226, 232, 240, 0.2);
+  }
+
+  .resizer:hover::after {
+    background: rgba(226, 232, 240, 0.5);
+  }
+
+  .resizer:hover {
+    background: rgba(226, 232, 240, 0.06);
+  }
+
+  .column-group {
+    color: #94a3b8;
+  }
+
+  .column-action-button {
+    color: #94a3b8;
+  }
+
+  .column-action-button:hover {
+    background: #1e3a8a;
+    border-color: #3b5a9a;
+  }
+
+  .column-menu {
+    background: #1e293b;
+    border-color: #334155;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  }
+
+  .column-menu button {
+    color: #f1f5f9;
+  }
+
+  .column-menu button:hover {
+    background: #334155;
+  }
+
+  .show-column-button,
+  .show-all-button {
+    border-color: #475569;
+    background: #1e293b;
+    color: #f1f5f9;
+  }
+
+  .show-column-button:hover,
+  .show-all-button:hover {
+    background: #334155;
+  }
+
+  .table-note {
+    color: #64748b;
+  }
 }
