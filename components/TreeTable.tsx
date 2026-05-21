@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 
 type Column = {
   id: string;
@@ -200,6 +201,7 @@ export default function TreeTable() {
   const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
   const [hiddenColumns, setHiddenColumns] = useState<string[]>([]);
   const [openMenuColumn, setOpenMenuColumn] = useState<string | null>(null);
+  const [menuAnchor, setMenuAnchor] = useState<{ top: number; left: number } | null>(null);
   const [columnWidths, setColumnWidths] = useState<Record<string, number>>(() => {
     const widths: Record<string, number> = {};
     getLeafColumns(columns).forEach((column) => {
@@ -291,6 +293,7 @@ export default function TreeTable() {
       const target = event.target as HTMLElement;
       if (!target.closest('.column-menu') && !target.closest('.column-action-button')) {
         setOpenMenuColumn(null);
+        setMenuAnchor(null);
       }
     };
 
@@ -360,29 +363,43 @@ export default function TreeTable() {
                             className="column-action-button"
                             onClick={(event) => {
                               event.stopPropagation();
-                              setOpenMenuColumn((prev) => (prev === column.id ? null : column.id));
+                              if (openMenuColumn === column.id) {
+                                setOpenMenuColumn(null);
+                                setMenuAnchor(null);
+                              } else {
+                                const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
+                                setMenuAnchor({ top: rect.bottom + window.scrollY + 6, left: rect.right + window.scrollX });
+                                setOpenMenuColumn(column.id);
+                              }
                             }}
                             aria-label={`Column actions for ${column.label}`}
                           >
                             ☰
                           </button>
-                          {openMenuColumn === column.id ? (
-                            <div className="column-menu">
-                              <button
-                                type="button"
-                                onClick={(event) => {
-                                  event.stopPropagation();
-                                  setHiddenColumns((prev) => [
-                                    ...prev,
-                                    ...leafIdsToHide.filter((id) => !prev.includes(id)),
-                                  ]);
-                                  setOpenMenuColumn(null);
-                                }}
-                              >
-                                {isLeaf ? 'Hide column' : 'Hide group'}
-                              </button>
-                            </div>
-                          ) : null}
+                          {openMenuColumn === column.id && menuAnchor
+                            ? createPortal(
+                                <div
+                                  className="column-menu"
+                                  style={{ position: 'absolute', top: menuAnchor.top, left: menuAnchor.left, transform: 'translateX(-100%)' }}
+                                >
+                                  <button
+                                    type="button"
+                                    onClick={(event) => {
+                                      event.stopPropagation();
+                                      setHiddenColumns((prev) => [
+                                        ...prev,
+                                        ...leafIdsToHide.filter((id) => !prev.includes(id)),
+                                      ]);
+                                      setOpenMenuColumn(null);
+                                      setMenuAnchor(null);
+                                    }}
+                                  >
+                                    {isLeaf ? 'Hide column' : 'Hide group'}
+                                  </button>
+                                </div>,
+                                document.body,
+                              )
+                            : null}
                         </span>
                       ) : null}
                     </div>
