@@ -87,10 +87,18 @@ p {
   padding: 10px 14px;
   text-align: left;
   font-size: 0.95rem;
-  min-width: 60px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  min-width: 0;
+  word-break: break-word;
+  overflow-wrap: break-word;
+}
+
+.tree-table th {
+  overflow: visible;
+}
+
+.tree-table td .resizer {
+  top: 0;
+  height: 100%;
 }
 
 .tree-table th {
@@ -123,6 +131,22 @@ p {
   height: 100%;
   cursor: col-resize;
   touch-action: none;
+}
+
+.resizer::after {
+  content: '';
+  position: absolute;
+  top: 15%;
+  right: 3px;
+  width: 1px;
+  height: 70%;
+  background: rgba(15, 23, 42, 0.15);
+  border-radius: 1px;
+  transition: background 0.15s;
+}
+
+.resizer:hover::after {
+  background: rgba(15, 23, 42, 0.35);
 }
 
 .resizer:hover {
@@ -189,19 +213,32 @@ p {
   background: #f8fafc;
 }
 
-.show-all-button {
+.hidden-columns-controls {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
   margin-left: 18px;
+}
+
+.show-column-button,
+.show-all-button {
   border: 1px solid #cbd5e1;
   background: #f8fafc;
   color: #1e293b;
   border-radius: 9999px;
-  padding: 8px 14px;
+  padding: 4px 12px;
   cursor: pointer;
   font-size: 0.9rem;
 }
 
+.show-column-button:hover,
 .show-all-button:hover {
   background: #e2e8f0;
+}
+
+.show-all-button {
+  font-weight: 500;
 }
 
 .table-note {

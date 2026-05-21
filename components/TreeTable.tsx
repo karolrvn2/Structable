@@ -150,6 +150,13 @@ function getLeafColumns(columnList: Column[]): Column[] {
   );
 }
 
+function getVisibleLeafColumns(column: Column, hiddenSet: Set<string>): Column[] {
+  if (!column.subColumns || column.subColumns.length === 0) {
+    return hiddenSet.has(column.id) ? [] : [column];
+  }
+  return column.subColumns.flatMap((child) => getVisibleLeafColumns(child, hiddenSet));
+}
+
 function getColumnDepth(columnList: Column[]): number {
   return columnList.reduce((depth, column) => {
     if (!column.subColumns) {
@@ -219,10 +226,21 @@ export default function TreeTable() {
     () => buildHeaderRows(columns, getColumnDepth(columns), hiddenSet),
     [hiddenSet],
   );
+  const resizerTargetByColumn = useMemo(() => {
+    const map = new Map<string, string>();
+    function traverse(column: Column) {
+      const visibleLeaves = getVisibleLeafColumns(column, hiddenSet);
+      if (visibleLeaves.length > 0) {
+        map.set(column.id, visibleLeaves[visibleLeaves.length - 1].id);
+      }
+      column.subColumns?.forEach(traverse);
+    }
+    columns.forEach(traverse);
+    return map;
+  }, [hiddenSet]);
 
-  const hideColumn = (columnId: string) => {
-    setHiddenColumns((prev) => (prev.includes(columnId) ? prev : [...prev, columnId]));
-    setOpenMenuColumn(null);
+  const showColumn = (columnId: string) => {
+    setHiddenColumns((prev) => prev.filter((id) => id !== columnId));
   };
 
   const showAllColumns = () => {
@@ -230,35 +248,39 @@ export default function TreeTable() {
     setOpenMenuColumn(null);
   };
 
-  useEffect(() => {
-    function handlePointerMove(event: PointerEvent) {
+  const handleResizerPointerDown = (
+    event: React.PointerEvent<HTMLDivElement>,
+    columnId: string,
+  ) => {
+    event.preventDefault();
+    event.stopPropagation();
+    resizingRef.current = {
+      id: columnId,
+      startX: event.clientX,
+      startWidth: columnWidths[columnId],
+    };
+
+    const handlePointerMove = (moveEvent: PointerEvent) => {
       if (!resizingRef.current) {
         return;
       }
       const { id, startX, startWidth } = resizingRef.current;
-      const delta = event.clientX - startX;
+      const delta = moveEvent.clientX - startX;
       setColumnWidths((prev) => {
-        const minWidth = allLeafColumns.find((col) => col.id === id)?.minWidth ?? 80;
-        const next = Math.max(startWidth + delta, minWidth);
+        const next = Math.max(startWidth + delta, 8);
         return { ...prev, [id]: next };
       });
-    }
+    };
 
-    function handlePointerUp() {
+    const handlePointerUp = () => {
       resizingRef.current = null;
       window.removeEventListener('pointermove', handlePointerMove);
       window.removeEventListener('pointerup', handlePointerUp);
-    }
+    };
 
-    if (resizingRef.current) {
-      window.addEventListener('pointermove', handlePointerMove);
-      window.addEventListener('pointerup', handlePointerUp);
-      return () => {
-        window.removeEventListener('pointermove', handlePointerMove);
-        window.removeEventListener('pointerup', handlePointerUp);
-      };
-    }
-  }, [allLeafColumns]);
+    window.addEventListener('pointermove', handlePointerMove);
+    window.addEventListener('pointerup', handlePointerUp, { once: true });
+  };
 
   useEffect(() => {
     if (!openMenuColumn) {
@@ -277,18 +299,6 @@ export default function TreeTable() {
       window.removeEventListener('pointerdown', handlePointerDown);
     };
   }, [openMenuColumn]);
-
-  const handleResizerPointerDown = (
-    event: React.PointerEvent<HTMLDivElement>,
-    columnId: string,
-  ) => {
-    event.preventDefault();
-    resizingRef.current = {
-      id: columnId,
-      startX: event.clientX,
-      startWidth: columnWidths[columnId],
-    };
-  };
 
   const toggleSelection = (key: string, event: React.MouseEvent<HTMLTableCellElement>) => {
     setSelectedKeys((prev) => {
@@ -315,7 +325,7 @@ export default function TreeTable() {
           {visibleLeafColumns.map((column) => (
             <col
               key={column.id}
-              style={{ width: `${columnWidths[column.id]}px`, minWidth: `${column.minWidth ?? 80}px` }}
+              style={{ width: `${columnWidths[column.id]}px`, minWidth: '8px' }}
             />
           ))}
         </colgroup>
@@ -325,8 +335,12 @@ export default function TreeTable() {
               {row.map(({ column, colSpan, rowSpan, depth }) => {
                 const headerKey = `header:${column.id}:${depth}`;
                 const isHeaderSelected = selectedSet.has(headerKey);
+                const resizerTargetId = resizerTargetByColumn.get(column.id);
                 const isLeaf = !column.subColumns || column.subColumns.length === 0;
-                const leafColumn = isLeaf ? visibleLeafColumns.find((leaf) => leaf.id === column.id) : undefined;
+                const leafIdsToHide = isLeaf
+                  ? (hiddenSet.has(column.id) ? [] : [column.id])
+                  : getVisibleLeafColumns(column, hiddenSet).map((c) => c.id);
+                const showMenu = leafIdsToHide.length > 0;
 
                 return (
                   <th
@@ -338,7 +352,7 @@ export default function TreeTable() {
                   >
                     <div className="column-group">
                       {column.label}
-                      {isLeaf && leafColumn ? (
+                      {showMenu ? (
                         <span className="header-actions">
                           <button
                             type="button"
@@ -357,20 +371,29 @@ export default function TreeTable() {
                                 type="button"
                                 onClick={(event) => {
                                   event.stopPropagation();
-                                  hideColumn(column.id);
+                                  setHiddenColumns((prev) => [
+                                    ...prev,
+                                    ...leafIdsToHide.filter((id) => !prev.includes(id)),
+                                  ]);
+                                  setOpenMenuColumn(null);
                                 }}
                               >
-                                Hide column
+                                {isLeaf ? 'Hide column' : 'Hide group'}
                               </button>
                             </div>
                           ) : null}
-                          <div
-                            className="resizer"
-                            onPointerDown={(event) => handleResizerPointerDown(event, column.id)}
-                          />
                         </span>
                       ) : null}
                     </div>
+                    {resizerTargetId ? (
+                      <div
+                        className="resizer"
+                        onPointerDown={(event) => {
+                          event.stopPropagation();
+                          handleResizerPointerDown(event, resizerTargetId);
+                        }}
+                      />
+                    ) : null}
                   </th>
                 );
               })}
@@ -390,6 +413,13 @@ export default function TreeTable() {
                     onClick={(event) => toggleSelection(bodyKey, event)}
                   >
                     {row[column.id as keyof typeof row] ?? '-'}
+                    <div
+                      className="resizer"
+                      onPointerDown={(event) => {
+                        event.stopPropagation();
+                        handleResizerPointerDown(event, column.id);
+                      }}
+                    />
                   </td>
                 );
               })}
@@ -400,9 +430,20 @@ export default function TreeTable() {
       <div className="table-note">
         Tip: Ctrl/Cmd + click to select multiple cells, including header groups.
         {hiddenColumns.length > 0 ? (
-          <button type="button" className="show-all-button" onClick={showAllColumns}>
-            Show all hidden columns ({hiddenColumns.length})
-          </button>
+          <span className="hidden-columns-controls">
+            Hidden:{' '}
+            {hiddenColumns.map((id) => {
+              const col = allLeafColumns.find((c) => c.id === id);
+              return (
+                <button key={id} type="button" className="show-column-button" onClick={() => showColumn(id)}>
+                  {col?.label ?? id}
+                </button>
+              );
+            })}
+            <button type="button" className="show-all-button" onClick={showAllColumns}>
+              Show all
+            </button>
+          </span>
         ) : null}
       </div>
     </div>
